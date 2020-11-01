@@ -99,6 +99,7 @@ class FallDetector:
                 process2 = mp.Process(target=alg2_sequential, args=(queues, argss,
                                                                     self.consecutive_frames, e))
                 process2.start()
+            print("\nBEFOR PROCESSING")
             process1.join()
         elif self.args.num_cams == 2:
             if self.args.video is None:
@@ -133,6 +134,7 @@ class FallDetector:
         else:
             print('More than 2 cameras are currently not supported')
             return
+        print("\n\nAFTER PROCESSING")
 
         if not self.args.coco_points:
             process2.join()

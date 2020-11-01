@@ -19,9 +19,13 @@ import math
 
 def get_source(args):
     tagged_df = None
+    """
     if args.video is None:
         cam = cv2.VideoCapture(0)
     else:
+    """
+    print("\n\nF1 - LINE 20")
+    if True:
         logging.debug(f'Video source: {args.video}')
         cam = cv2.VideoCapture(args.video)
         if isinstance(args.video, str):
@@ -33,10 +37,14 @@ def get_source(args):
                     f'Subject == {vid[1]} & Activity == {vid[0]} & Trial == {vid[2]}')
     img = cam.read()[1]
     logging.debug('Image shape:', img.shape)
+    print("\n\nEXIT F1 - LINE 40")
+
     return cam, tagged_df
 
 
 def resize(img, resize, resolution):
+    print("\n\nF2 - LINE 43")
+
     # Resize the video
     if resize is None:
         height, width = img.shape[:2]
@@ -44,10 +52,14 @@ def resize(img, resize, resolution):
         width, height = [int(dim) for dim in resize.split('x')]
     width_height = (int(width * resolution // 16) * 16,
                     int(height * resolution // 16) * 16)
+    print("\n\nEXIT F2 - LINE 53")
+    
     return width, height, width_height
 
 
 def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecutive_frames, event):
+    print("\n\nF3 - LINE 58")
+
     try:
         cam, tagged_df = get_source(args)
         ret_val, img = cam.read()
@@ -60,6 +72,8 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
 
     width, height, width_height = resize(img, args.resize, args.resolution)
     logging.debug(f'Target width and height = {width_height}')
+    print("\n\n IS X Server used here?")
+
     processor_singleton = Processor(width_height, args)
 
     output_video = None
@@ -67,12 +81,16 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
     frame = 0
     fps = 0
     t0 = time.time()
+    index = 0
     while not event.is_set():
         # print(args.video,self_counter.value,other_counter.value,sep=" ")
         if args.num_cams == 2 and (self_counter.value > other_counter.value):
             continue
 
+        print("\n\nINSIDE F3 - LINE 88")
+        print("cam.read()")
         ret_val, img = cam.read()
+
         frame += 1
         self_counter.value += 1
         if tagged_df is None:
@@ -121,7 +139,12 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
                     "tagged_df": {"text": f"Avg FPS: {frame//(time.time()-t0)}, Frame: {frame}", "color": [0, 0, 0]}}
         queue.put(dict_vis)
 
+        cv2.imwrite("/content/test/image/img" + str(index) +".jpg", img)
+        index = index + 1
+
     queue.put(None)
+    print("\n\nEXIT F3 - LINE 135")
+
     return
 
 
@@ -129,6 +152,8 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
 
 
 def show_tracked_img(img_dict, ip_set, num_matched, output_video, args):
+    print("\n\nF4 - LINE 141")
+
     img = img_dict["img"]
     tagged_df = img_dict["tagged_df"]
     keypoints_frame = [person[-1] for person in ip_set]
@@ -151,10 +176,14 @@ def show_tracked_img(img_dict, ip_set, num_matched, output_video, args):
             logging.debug(f'Not saving the output video')
     else:
         output_video.write(img)
+
+    print("\n\nEXIT F4 - LINE 167")
+
     return img, output_video
 
 
 def remove_wrongly_matched(matched_1, matched_2):
+    print("\n\nF5 LINE 169")
 
     unmatched_idxs = []
     i = 0
@@ -165,11 +194,13 @@ def remove_wrongly_matched(matched_1, matched_2):
         if correlation < 0.5*HIST_THRESH:
             unmatched_idxs.append(i)
         i += 1
+    print("\n\nEXIT F5 - LINE 181")
 
     return unmatched_idxs
 
 
 def match_unmatched(unmatched_1, unmatched_2, lstm_set1, lstm_set2, num_matched):
+    print("\n\nF6 - LINE 185")
 
     new_matched_1 = []
     new_matched_2 = []
@@ -227,11 +258,14 @@ def match_unmatched(unmatched_1, unmatched_2, lstm_set1, lstm_set2, num_matched)
             new_lstm2.append(lstm_set2[j])
 
     # print("finalpairs", final_pairs, sep="\n")
+    print("\n\nEXIT F6 - LINE 244")
 
     return final_pairs, new_matched_1, new_matched_2, new_lstm1, new_lstm2
 
 
 def alg2_sequential(queues, argss, consecutive_frames, event):
+    print("\n\nF7 - LINE 248")
+
     model = LSTMModel(h_RNN=32, h_RNN_layers=2, drop_p=0.2, num_classes=7)
     model.load_state_dict(torch.load('lstm2.sav',map_location=argss[0].device))
     model.eval()
@@ -271,7 +305,7 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
                 dict_frames[0]["tagged_df"]["text"] += f" Pred: {activity_dict[prediction+5]}"
                 img, output_videos[0] = show_tracked_img(dict_frames[0], ip_sets[0], num_matched, output_videos[0], argss[0])
                 # print(img1.shape)
-                cv2.imshow(window_names[0], img)
+                # cv2.imshow(window_names[0], img)
 
             elif argss[0].num_cams == 2:
                 num_matched, new_num, indxs_unmatched1 = match_ip(ip_sets[0], kp_frames[0], lstm_sets[0], num_matched, max_length_mat)
@@ -348,8 +382,8 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
                 img1, output_videos[0] = show_tracked_img(dict_frames[0], ip_sets[0], num_matched, output_videos[0], argss[0])
                 img2, output_videos[1] = show_tracked_img(dict_frames[1], ip_sets[1], num_matched, output_videos[1], argss[1])
                 # print(img1.shape)
-                cv2.imshow(window_names[0], img1)
-                cv2.imshow(window_names[1], img2)
+                # cv2.imshow(window_names[0], img1)
+                # cv2.imshow(window_names[1], img2)
 
                 assert(len(lstm_sets[0]) == len(ip_sets[0]))
                 assert(len(lstm_sets[1]) == len(ip_sets[1]))
@@ -367,7 +401,7 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
             #             feature_plotter[cnt].append(0)
             # DEBUG = True
 
-    cv2.destroyAllWindows()
+    # cv2.destroyAllWindows()
     # for feature_plotter in feature_plotters:
     #     for i, feature_arr in enumerate(feature_plotter):
     #         plt.clf()
@@ -392,11 +426,16 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
     #     #     print(np.linalg.norm(ip_sets[0][0][-1][0]['B']-ip_sets[0][0][-1][0]['H']))
 
     # print("P2 Over")
+
+    print("\n\nEXIT F7 - LINE 248")
+
     del model
     return
 
 
 def get_all_features(ip_set, lstm_set, model):
+    print("\n\nF8 - LINE 418")
+
     valid_idxs = []
     invalid_idxs = []
     predictions = [15]*len(ip_set)  # 15 is the tag for None
@@ -477,11 +516,13 @@ def get_all_features(ip_set, lstm_set, model):
             else:
                 lstm_set[i][3] = 0
             predictions[i] = prediction
+    print("\n\nEXIT F8 - LINE 501")
 
     return valid_idxs, predictions[0] if len(predictions) > 0 else 15
 
 
 def get_frame_features(ip_set, new_frame, re_matrix, gf_matrix, num_matched, max_length_mat=DEFAULT_CONSEC_FRAMES):
+    print("\n\nF9 - LINE 505")
 
     match_ip(ip_set, new_frame, re_matrix, gf_matrix, max_length_mat)
     return
@@ -522,5 +563,6 @@ def get_frame_features(ip_set, new_frame, re_matrix, gf_matrix, num_matched, max
         else:
 
             pop_and_add(gf_matrix[i], 0, max_length_mat)
+    print("\n\nEXIT F9 - LINE 548")
 
     return
