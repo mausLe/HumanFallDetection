@@ -81,7 +81,7 @@ class FallDetector:
         return args
 
     def begin(self):
-        print('Starting...')
+        print('Begin...')
         e = mp.Event()
         queues = [mp.Queue() for _ in range(self.args.num_cams)]
         counter1 = mp.Value('i', 0)
@@ -92,6 +92,8 @@ class FallDetector:
                 argss[0].video = 0
             process1 = mp.Process(target=extract_keypoints_parallel,
                                   args=(queues[0], argss[0], counter1, counter2, self.consecutive_frames, e))
+            
+            print("Start process1")
             process1.start()
             if self.args.coco_points:
                 process1.join()

@@ -87,7 +87,7 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
         if args.num_cams == 2 and (self_counter.value > other_counter.value):
             continue
 
-        print("\n\nINSIDE F3 - LINE 88")
+        print("\n\nINSIDE F3 - LINE 88 FRAME {}".format(index))
         print("cam.read()")
         ret_val, img = cam.read()
 
@@ -143,7 +143,8 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
         index = index + 1
 
     queue.put(None)
-    print("\n\nEXIT F3 - LINE 135")
+    print("\nTOTAL {} FRAMES".format(index))
+    print("\nEXIT F3 - LINE 135")
 
     return
 
@@ -266,9 +267,16 @@ def match_unmatched(unmatched_1, unmatched_2, lstm_set1, lstm_set2, num_matched)
 def alg2_sequential(queues, argss, consecutive_frames, event):
     print("\n\nF7 - LINE 248")
 
+    print("\ninit LSTM object - LINE 270")
     model = LSTMModel(h_RNN=32, h_RNN_layers=2, drop_p=0.2, num_classes=7)
+
+    print("\nload LSTM2.sav - LINE 273")
     model.load_state_dict(torch.load('lstm2.sav',map_location=argss[0].device))
+
+    print("\nEvaluate - LINE 276")
     model.eval()
+    print("\nFinish Evaluating - LINE 278")
+
     output_videos = [None for _ in range(argss[0].num_cams)]
     t0 = time.time()
     feature_plotters = [[[], [], [], [], []] for _ in range(argss[0].num_cams)]
@@ -281,8 +289,10 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
     else:
         f, ax = plt.subplots()
         move_figure(f, 800, 100)
-    window_names = [args.video if isinstance(args.video, str) else 'Cam '+str(args.video) for args in argss]
-    [cv2.namedWindow(window_name) for window_name in window_names]
+    # window_names = [args.video if isinstance(args.video, str) else 'Cam '+str(args.video) for args in argss]
+    # [cv2.namedWindow(window_name) for window_name in window_names]
+    
+    print("\nEntering Loop - LINE 295")
     while True:
 
         # if not queue1.empty() and not queue2.empty():
@@ -294,10 +304,13 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
                     event.set()
                 break
 
+            """
             if cv2.waitKey(1) == 27 or any(cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1 for window_name in window_names):
                 if not event.is_set():
                     event.set()
+            """
 
+            print("-"*20)
             kp_frames = [dict_frame["keypoint_sets"] for dict_frame in dict_frames]
             if argss[0].num_cams == 1:
                 num_matched, new_num, indxs_unmatched = match_ip(ip_sets[0], kp_frames[0], lstm_sets[0], num_matched, max_length_mat)
