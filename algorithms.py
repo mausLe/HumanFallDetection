@@ -87,8 +87,8 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
         if args.num_cams == 2 and (self_counter.value > other_counter.value):
             continue
 
-        print("\n\nINSIDE F3 - LINE 88 FRAME {}".format(index))
-        print("cam.read()")
+        # print("\n\nINSIDE F3 - LINE 88 FRAME {}".format(index))
+        # print("cam.read()")
         ret_val, img = cam.read()
 
         frame += 1
@@ -153,7 +153,7 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
 
 
 def show_tracked_img(img_dict, ip_set, num_matched, output_video, args):
-    print("\n\nF4 - LINE 141")
+    # print("\n\nF4 - LINE 141")
 
     img = img_dict["img"]
     tagged_df = img_dict["tagged_df"]
@@ -178,7 +178,7 @@ def show_tracked_img(img_dict, ip_set, num_matched, output_video, args):
     else:
         output_video.write(img)
 
-    print("\n\nEXIT F4 - LINE 167")
+    # print("\n\nEXIT F4 - LINE 167")
 
     return img, output_video
 
@@ -447,7 +447,7 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
 
 
 def get_all_features(ip_set, lstm_set, model):
-    print("\n\nF8 - LINE 418")
+    # print("\n\nF8 - LINE 418")
 
     valid_idxs = []
     invalid_idxs = []
@@ -529,7 +529,7 @@ def get_all_features(ip_set, lstm_set, model):
             else:
                 lstm_set[i][3] = 0
             predictions[i] = prediction
-    print("\n\nEXIT F8 - LINE 501")
+    # print("\n\nEXIT F8 - LINE 501")
 
     return valid_idxs, predictions[0] if len(predictions) > 0 else 15
 
