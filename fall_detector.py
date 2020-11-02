@@ -60,8 +60,8 @@ class FallDetector:
                               help='Save the result in a video file. Output videos are saved in the same directory as input videos with "out" appended at the start of the title')
         vis_args.add_argument('--fps', default=18, type=int,
                               help='FPS for the output video.')
-        # vis_args.add_argument('--out-path', default='result.avi', type=str,
-        #                       help='Save the output video at the path specified. .avi file format.')
+        vis_args.add_argument('--out-path', default='result.avi', type=str,
+                              help='Save the output video at the path specified. .avi file format.')
 
         args = parser.parse_args()
 

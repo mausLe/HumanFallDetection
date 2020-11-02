@@ -310,7 +310,6 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
                     event.set()
             """
 
-            print("-"*20)
             kp_frames = [dict_frame["keypoint_sets"] for dict_frame in dict_frames]
             if argss[0].num_cams == 1:
                 num_matched, new_num, indxs_unmatched = match_ip(ip_sets[0], kp_frames[0], lstm_sets[0], num_matched, max_length_mat)
