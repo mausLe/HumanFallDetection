@@ -139,7 +139,7 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
                     "tagged_df": {"text": f"Avg FPS: {frame//(time.time()-t0)}, Frame: {frame}", "color": [0, 0, 0]}}
         queue.put(dict_vis)
 
-        cv2.imwrite("/content/test/image/img" + str(index) +".jpg", img)
+        cv2.imwrite("/content/test/visualization/img" + str(index) +".jpg", img)
         index = index + 1
 
     queue.put(None)
@@ -293,6 +293,7 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
     # [cv2.namedWindow(window_name) for window_name in window_names]
     
     print("\nEntering Loop - LINE 295")
+    no_img = 1
     while True:
 
         # if not queue1.empty() and not queue2.empty():
@@ -316,6 +317,12 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
                 valid1_idxs, prediction = get_all_features(ip_sets[0], lstm_sets[0], model)
                 dict_frames[0]["tagged_df"]["text"] += f" Pred: {activity_dict[prediction+5]}"
                 img, output_videos[0] = show_tracked_img(dict_frames[0], ip_sets[0], num_matched, output_videos[0], argss[0])
+                
+                window_names = [args.video if isinstance(args.video, str) else 'Cam '+str(args.video) for args in argss]
+
+
+                cv2.imwrite("/content/test/HFD_output/frame {}.jpg".format(no_img), img)
+                no_img = no_img + 1                
                 # print(img1.shape)
                 # cv2.imshow(window_names[0], img)
 
@@ -396,6 +403,7 @@ def alg2_sequential(queues, argss, consecutive_frames, event):
                 # print(img1.shape)
                 # cv2.imshow(window_names[0], img1)
                 # cv2.imshow(window_names[1], img2)
+
 
                 assert(len(lstm_sets[0]) == len(ip_sets[0]))
                 assert(len(lstm_sets[1]) == len(ip_sets[1]))
