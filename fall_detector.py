@@ -63,6 +63,13 @@ class FallDetector:
         vis_args.add_argument('--out-path', default='result.avi', type=str,
                               help='Save the output video at the path specified. .avi file format.')
 
+#         vis_args.add_argument('--input_frame', default=False, action='store_true',
+#                               help='Save the result in a video file. Output videos are saved in the same directory as input videos with "out" appended at the start of the title')
+
+        vis_args.add_argument('--input_direct', default=None, type=str,
+                              help='Save the input link to images directory.')
+
+
         args = parser.parse_args()
 
         # Log
@@ -94,6 +101,20 @@ class FallDetector:
                                   args=(queues[0], argss[0], counter1, counter2, self.consecutive_frames, e))
             
             print("Start process1")
+
+            # ARGS:  Namespace(basenet=None, caf_seeds=False, caf_th=0.1, 
+            # checkpoint='shufflenetv2k16w', cif_th=0.1, coco_points=False, 
+            # connection_method='blend', cross_talk=0.0, debug=False, decoder_workers=None, 
+            # dense_connections=False, dense_coupling=0.01, device=device(type='cuda'), 
+            # disable_cuda=False, download_progress=True, force_complete_pose=True, 
+            # fps=18, greedy=False, head_dropout=0.0, head_quad=1, headnets=None, 
+            # instance_threshold=0.2, joints=True, keypoint_threshold=None, 
+            # multi_scale=False, multi_scale_hflip=True, num_cams=1, 
+            # out_path='result.avi', pin_memory=True, plot_graph=False, pretrained=True, 
+            # profile_decoder=None, resize=None, resolution=0.4, save_output=True, 
+            # seed_threshold=0.5, skeleton=True, two_scale=False, 
+            # video='/content/HumanFallDetection/vids/input/fallingdown.mp4')
+
             process1.start()
             if self.args.coco_points:
                 process1.join()
