@@ -66,7 +66,7 @@ def resize(img, resize, resolution):
 
 # Loading image from dataset
 def loadFrame(args, frame, cam):
-    image = cam.read()
+    _, image = cam.read() # Fucked up here :v Always fill up output
 
     return image 
 
@@ -88,20 +88,38 @@ def readImage(args, frame, cam):
 
 def forward(func, args, frame, cam):
     
-    return func(args)
+    return func(args, frame, cam)
 
 def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecutive_frames, event):
+    global harLink
+
     print("\n\nF3 - LINE 58")
+
+    print("INPUT DIR: ", args.input_direct)
+    print("INPUT video: ", args.video)
 
     funcVar = loadFrame
     cam = None
+    tagged_df = None
 
     try:
         if args.input_direct is not None:
-            randLink = random.choice([x for x in os.listdir(args.input_direct)])           
-            img = cv2.imread(randLink)
-            funcVar = readImage
+            ## Reading HAR UP dataset
+            harDir = args.input_direct # This folder contains HAR-UP sub-dataset images
 
+            harLink = [imageLink for imageLink in glob.glob(harDir)]
+            harLink.sort()
+
+            # randLink = random.choice([x for x in os.listdir(args.input_direct)])           
+            
+            randLink = harLink[0]
+
+            img = cv2.imread(randLink)
+            print("IMG: ", img)
+            print("IMG LINK: ", harLink)
+            
+            print("IMG LINK: ", randLink)
+            funcVar = readImage
 
         else: 
             cam, tagged_df = get_source(args)
@@ -127,12 +145,6 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
     fps = 0
     t0 = time.time()
     index = 0
-
-    ## Reading HAR UP dataset
-    harDir = args.input_direct # This folder contains HAR-UP sub-dataset images
-
-    harLink = [imageLink for imageLink in glob.glob(harDir)]
-    harLink.sort()
 
     while not event.is_set():
 
