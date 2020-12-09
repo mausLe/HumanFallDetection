@@ -15,7 +15,10 @@ from scipy.signal import savgol_filter, lfilter
 from model import LSTMModel
 import torch
 import math
-import glob
+import os, glob, random
+
+harLink = [] # global var contains links to image data
+
 
 def get_source(args): 
     """
@@ -61,18 +64,57 @@ def resize(img, resize, resolution):
     return width, height, width_height
 
 
+# Loading image from dataset
+def loadFrame(args, frame, cam):
+    image = cam.read()
+
+    return image 
+
+# Reading image from recording video/camera
+def readImage(args, frame, cam):
+    image = None
+
+    # Inputs are frames instead of video
+    # loading every frames
+    try:
+        imgLink = harLink[frame]
+        image = cv2.imread(imgLink)
+    
+    except IndexError:
+        image = None
+
+
+    return image
+
+def forward(func, args, frame, cam):
+    
+    return func(args)
+
 def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecutive_frames, event):
     print("\n\nF3 - LINE 58")
 
+    funcVar = loadFrame
+    cam = None
+
     try:
-        cam, tagged_df = get_source(args)
-        ret_val, img = cam.read()
+        if args.input_direct is not None:
+            randLink = random.choice([x for x in os.listdir(args.input_direct)])           
+            img = cv2.imread(randLink)
+            funcVar = readImage
+
+
+        else: 
+            cam, tagged_df = get_source(args)
+            ret_val, img = cam.read()
+            funcVar = loadFrame    
+        
     except Exception as e:
         queue.put(None)
         event.set()
         print('Exception occurred:', e)
-        print('Most likely that the video/camera doesn\'t exist')
+        print('Most likely that the images/video/camera doesn\'t exist')
         return
+
 
     width, height, width_height = resize(img, args.resize, args.resolution)
     logging.debug(f'Target width and height = {width_height}')
@@ -86,10 +128,6 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
     t0 = time.time()
     index = 0
 
-    # Reading HAR UP dataset
-    # s1a1t1c1 = "/content/gdrive/MyDrive/B2DL-Research/Fall-Detection/Datasets/UP-Fall Detection/Subject1/Activity1/Trial1/Camera1/*.*"
-
-
     ## Reading HAR UP dataset
     harDir = args.input_direct # This folder contains HAR-UP sub-dataset images
 
@@ -97,24 +135,13 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
     harLink.sort()
 
     while not event.is_set():
+
         # print("\n\nINSIDE F3 - LINE 88 FRAME {}".format(index))
         
         if args.num_cams == 2 and (self_counter.value > other_counter.value):
             continue
         
-        # Inputs are frames instead of video
-        # loading every frames
-        if args.input_direct is not None: 
-            try:
-                imgLink = harLink[frame]
-                img = cv2.imread(imgLink)
-            
-            except IndexError:
-                img = None
-        
-        # Reading every frames from video
-        else:
-            _, img = cam.read() 
+        img = forward(funcVar, args, frame, cam)
 
         frame += 1
         self_counter.value += 1
