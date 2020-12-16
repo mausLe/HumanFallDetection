@@ -15,17 +15,24 @@ from scipy.signal import savgol_filter, lfilter
 from model import LSTMModel
 import torch
 import math
-import glob
+import os, glob, random
+
+harLink = [] # global var contains links to image data
+
 
 def get_source(args): 
-    tagged_df = None
     """
-    if args.video is None:
-        cam = cv2.VideoCapture(0)
-    else:
+    This function is used to get current "cam" object
+    Then using this object to read video/camera 
     """
     print("\n\nF1 - LINE 20")
-    if True:
+    tagged_df = None
+    """
+    """
+    if args.video is None and args.input_direct is not None:
+        cam = cv2.VideoCapture(0)
+    
+    else:
         logging.debug(f'Video source: {args.video}')
         cam = cv2.VideoCapture(args.video)
         if isinstance(args.video, str):
@@ -57,22 +64,78 @@ def resize(img, resize, resolution):
     return width, height, width_height
 
 
+# Loading image from dataset
+def loadFrame(args, frame, cam):
+    _, image = cam.read() # Fucked up here :v Always fill up output
+
+    return image 
+
+# Reading image from recording video/camera
+def readImage(args, frame, cam):
+    image = None
+
+    # Inputs are frames instead of video
+    # loading every frames
+    try:
+        imgLink = harLink[frame]
+        image = cv2.imread(imgLink)
+    
+    except IndexError:
+        image = None
+
+
+    return image
+
+def forward(func, args, frame, cam):
+    
+    return func(args, frame, cam)
+
 def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecutive_frames, event):
+    global harLink
+    harLink = []
+
     print("\n\nF3 - LINE 58")
 
+    print("INPUT DIR: ", args.input_direct)
+    print("INPUT video: ", args.video)
+
+    funcVar = loadFrame
+    cam = None
+    tagged_df = None
+
     try:
-        cam, tagged_df = get_source(args)
-        ret_val, img = cam.read()
+        if args.input_direct is not None:
+            ## Reading HAR UP dataset
+            harDir = args.input_direct # This folder contains HAR-UP sub-dataset images
+
+            harLink = [imageLink for imageLink in glob.glob(harDir)]
+            harLink.sort()
+
+            # randLink = random.choice([x for x in os.listdir(args.input_direct)])           
+            
+            randLink = harLink[0]
+
+            img = cv2.imread(randLink)
+
+            funcVar = readImage
+
+            args.video = args.out_path + "test.mp4"
+
+        else: 
+            cam, tagged_df = get_source(args)
+            ret_val, img = cam.read()
+            funcVar = loadFrame    
+        
     except Exception as e:
         queue.put(None)
         event.set()
         print('Exception occurred:', e)
-        print('Most likely that the video/camera doesn\'t exist')
+        print('Most likely that the images/video/camera doesn\'t exist')
         return
+
 
     width, height, width_height = resize(img, args.resize, args.resolution)
     logging.debug(f'Target width and height = {width_height}')
-    print("\n\n IS X Server used here?")
 
     processor_singleton = Processor(width_height, args)
 
@@ -82,14 +145,15 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
     fps = 0
     t0 = time.time()
     index = 0
+
     while not event.is_set():
-        # print(args.video,self_counter.value,other_counter.value,sep=" ")
+
+        # print("\n\nINSIDE F3 - LINE 88 FRAME {}".format(index))
+        
         if args.num_cams == 2 and (self_counter.value > other_counter.value):
             continue
-
-        # print("\n\nINSIDE F3 - LINE 88 FRAME {}".format(index))
-        # print("cam.read()")
-        ret_val, img = cam.read()
+        
+        img = forward(funcVar, args, frame, cam)
 
         frame += 1
         self_counter.value += 1
@@ -139,69 +203,8 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
                     "tagged_df": {"text": f"Avg FPS: {frame//(time.time()-t0)}, Frame: {frame}", "color": [0, 0, 0]}}
         queue.put(dict_vis)
 
-        cv2.imwrite("/content/test/visualization/img" + str(index) +".jpg", img)
+        # cv2.imwrite("/content/test/visualization/img" + str(index) +".jpg", img)
         index = index + 1
-    """
-
-    # Reading HAR UP dataset
-    s1a1t1c1 = "/content/gdrive/MyDrive/B2DL-Research/Fall-Detection/Datasets/UP-Fall Detection/Subject1/Activity1/Trial1/Camera1/*.*"
-
-    for image in glob.glob(s1a1t1c1):
-        # print("\n\nINSIDE F3 - LINE 88 FRAME {}".format(index))
-        # print("cam.read()")
-
-        img = cv2.imread(image)
-        frame += 1
-        self_counter.value += 1
-        if tagged_df is None:
-            curr_time = time.time()
-        else:
-            curr_time = tagged_df.iloc[frame-1]['TimeStamps'][11:]
-            curr_time = sum(x * float(t) for x, t in zip([3600, 60, 1], curr_time.split(":")))
-
-        if img is None:
-            print('no more images captured')
-            print(args.video, curr_time, sep=" ")
-            if not event.is_set():
-                event.set()
-            break
-
-        img = cv2.resize(img, (width, height))
-        hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        keypoint_sets, bb_list, width_height = processor_singleton.single_image(img)
-        assert bb_list is None or (type(bb_list) == list)
-        if bb_list:
-            assert type(bb_list[0]) == tuple
-            assert type(bb_list[0][0]) == tuple
-        # assume bb_list is a of the form [(x1,y1),(x2,y2)),etc.]
-
-        if args.coco_points:
-            keypoint_sets = [keypoints.tolist() for keypoints in keypoint_sets]
-        else:
-            anns = [get_kp(keypoints.tolist()) for keypoints in keypoint_sets]
-            ubboxes = [(np.asarray([width, height])*np.asarray(ann[1])).astype('int32')
-                       for ann in anns]
-            lbboxes = [(np.asarray([width, height])*np.asarray(ann[2])).astype('int32')
-                       for ann in anns]
-            bbox_list = [(np.asarray([width, height])*np.asarray(box)).astype('int32') for box in bb_list]
-            uhist_list = [get_hist(hsv_img, bbox) for bbox in ubboxes]
-            lhist_list = [get_hist(img, bbox) for bbox in lbboxes]
-            keypoint_sets = [{"keypoints": keyp[0], "up_hist":uh, "lo_hist":lh, "time":curr_time, "box":box}
-                             for keyp, uh, lh, box in zip(anns, uhist_list, lhist_list, bbox_list)]
-
-            cv2.polylines(img, ubboxes, True, (255, 0, 0), 2)
-            cv2.polylines(img, lbboxes, True, (0, 255, 0), 2)
-            for box in bbox_list:
-                cv2.rectangle(img, tuple(box[0]), tuple(box[1]), ((0, 0, 255)), 2)
-
-        dict_vis = {"img": img, "keypoint_sets": keypoint_sets, "width": width, "height": height, "vis_keypoints": args.joints,
-                    "vis_skeleton": args.skeleton, "CocoPointsOn": args.coco_points,
-                    "tagged_df": {"text": f"Avg FPS: {frame//(time.time()-t0)}, Frame: {frame}", "color": [0, 0, 0]}}
-        queue.put(dict_vis)
-
-        cv2.imwrite("/content/test/visualization/img" + str(index) +".jpg", img)
-        index = index + 1
-    """
 
     queue.put(None)
     print("\nTOTAL {} FRAMES".format(index))
@@ -228,12 +231,24 @@ def show_tracked_img(img_dict, ip_set, num_matched, output_video, args):
 
     if output_video is None:
         if args.save_output:
-            vidname = args.video.split('/')
+            # args.video = "hooooo"
+            # print("VIDNAME: ", args.video)
+            # print("out_path: ", args.out_path)
+
             # output_video = cv2.VideoWriter(filename='/'.join(vidname[:-1])+'/out'+vidname[-1][:-3]+'avi', fourcc=cv2.VideoWriter_fourcc(*'MP42'),
             #                                fps=args.fps, frameSize=img.shape[:2][::-1])
-            
-            output_video = cv2.VideoWriter(filename = args.out_path +'/out'+vidname[-1][:-3]+'avi', fourcc=cv2.VideoWriter_fourcc(*'MP42'),
+            if args.input_direct is None:
+                vidname = args.video.split('/')
+                output_video = cv2.VideoWriter(filename = args.out_path +'/out_' + vidname[-1][:-3]+'avi', fourcc=cv2.VideoWriter_fourcc(*'MP42'),
                                            fps=args.fps, frameSize=img.shape[:2][::-1])
+            
+            else:
+                # /content/HumanFallDetection/vids/input/harUP/s1a1t1c1/Camera1/*.*
+                vidname = args.input_direct.split("/")
+                output_video = cv2.VideoWriter(filename = args.out_path +'/out_' + vidname[-3]  + '.avi', fourcc=cv2.VideoWriter_fourcc(*'MP42'),
+                                           fps=args.fps, frameSize=img.shape[:2][::-1])
+                
+            
             logging.debug(
                 f'Saving the output video at {args.out_path} with {args.fps} frames per seconds')
         else:
