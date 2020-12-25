@@ -13,20 +13,22 @@ class Processor(object):
         self.width_height = width_height
 
         # Load model
-        print("\nPROCESSOR.PY INIT 1")
+        print("PROCESSOR.PY, Call openpifpaf.NETWORK.factory_from_args()")
+        print("return net_cpu, epoch")
         self.model, _ = openpifpaf.network.factory_from_args(args)
-        print("\nPROCESSOR.PY INIT 2")
 
+        print("PROCESSOR.PY, Call model.to(args.device)")
         self.model = self.model.to(args.device)
-        print("\nPROCESSOR.PY INIT 3")
 
+        print("\nPROCESSOR.PY, Call openpifpaf.DECODER.factory_from_args()")
         self.processor = openpifpaf.decoder.factory_from_args(args, self.model)
-        print("\nPROCESSOR.PY INIT 4")
-
+        
         # print(self.processor.device)
         self.device = args.device
 
     def get_bb(self, kp_set, score=None):
+        print("\nPROCESSOR.PY, Get Openpifpaf Bounding box")
+
         bb_list = []
         for i in range(kp_set.shape[0]):
             x = kp_set[i, :15, 0]
@@ -58,6 +60,8 @@ class Processor(object):
 
     @staticmethod
     def keypoint_sets(annotations):
+        print("\nPROCESSOR.PY, Get Openpifpaf keypoint_sets")
+
         keypoint_sets = [ann.data for ann in annotations]
         # scores = [ann.score() for ann in annotations]
         # assert len(scores) == len(keypoint_sets)
@@ -69,6 +73,9 @@ class Processor(object):
         return keypoint_sets
 
     def single_image(self, image):
+        print("\nPROCESSOR.PY, Process on single image")
+
+
         # image_bytes = io.BytesIO(base64.b64decode(b64image))
         # im = PIL.Image.open(image_bytes).convert('RGB')
         im = PIL.Image.fromarray(image)
@@ -82,16 +89,21 @@ class Processor(object):
         width_height = im.size
 
         start = time.time()
+
+        print("\nPROCESSOR.PY, CALL openpifpaf.TRANSFORMS.Compose()")
+
         preprocess = openpifpaf.transforms.Compose([
             openpifpaf.transforms.NormalizeAnnotations(),
             openpifpaf.transforms.CenterPadTight(16),
             openpifpaf.transforms.EVAL_TRANSFORM,
         ])
         # processed_image, _, __ = preprocess(im, [], None)
+        print("\nPROCESSOR.PY, CALL openpifpaf.PILImageList.PilImageList()")
         processed_image = openpifpaf.datasets.PilImageList([im], preprocess=preprocess)[0][0]
         # processed_image = processed_image_cpu.contiguous().to(self.device, non_blocking=True)
         # print(f'preprocessing time {time.time() - start}')
 
+        print("\nPROCESSOR.PY, CALL processor.batch")
         all_fields = self.processor.batch(self.model, torch.unsqueeze(
             processed_image.float(), 0), device=self.device)[0]
         keypoint_sets = self.keypoint_sets(all_fields)

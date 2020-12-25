@@ -117,13 +117,18 @@ class FallDetector:
 
             process1.start()
             if self.args.coco_points:
+                print("\n\nFALL_DETECTOR.PY, COCO_points - line 120")
                 process1.join()
             else:
+                print("\n\nFALL_DETECTOR.PY, call mp.Process() class - line 123")
                 process2 = mp.Process(target=alg2_sequential, args=(queues, argss,
                                                                     self.consecutive_frames, e))
                 process2.start()
-            print("\nBEFOR PROCESSING")
+
+            
+            print("\n\nFALL_DETECTOR.PY, call process1.join() - line 129")
             process1.join()
+
         elif self.args.num_cams == 2:
             if self.args.video is None:
                 argss[0].video = 0

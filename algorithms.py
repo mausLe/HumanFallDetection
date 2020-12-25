@@ -25,7 +25,7 @@ def get_source(args):
     This function is used to get current "cam" object
     Then using this object to read video/camera 
     """
-    print("\n\nF1 - LINE 20")
+    print("\n\nFunction 1 - line 28")
     tagged_df = None
     """
     """
@@ -44,13 +44,13 @@ def get_source(args):
                     f'Subject == {vid[1]} & Activity == {vid[0]} & Trial == {vid[2]}')
     img = cam.read()[1]
     logging.debug('Image shape:', img.shape)
-    print("\n\nEXIT F1 - LINE 40")
+    print("\n\nEXIT Function 1 - LINE 47")
 
     return cam, tagged_df
 
 
 def resize(img, resize, resolution):
-    print("\n\nF2 - LINE 43")
+    print("\n\nFunct 2  - Resize - LINE 43")
 
     # Resize the video
     if resize is None:
@@ -59,7 +59,7 @@ def resize(img, resize, resolution):
         width, height = [int(dim) for dim in resize.split('x')]
     width_height = (int(width * resolution // 16) * 16,
                     int(height * resolution // 16) * 16)
-    print("\n\nEXIT F2 - LINE 53")
+    print("\n\nEXIT Function 2 - LINE 53")
     
     return width, height, width_height
 
@@ -94,10 +94,10 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
     global harLink
     harLink = []
 
-    print("\n\nF3 - LINE 58")
+    print("\n\nFunction 3 - extract_keypoints_parallel() - LINE 58")
 
-    print("INPUT DIR: ", args.input_direct)
-    print("INPUT video: ", args.video)
+    # print("INPUT DIR: ", args.input_direct)
+    # print("INPUT video: ", args.video)
 
     funcVar = loadFrame
     cam = None
@@ -105,6 +105,9 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
 
     try:
         if args.input_direct is not None:
+
+            print("Load image frames")
+
             ## Reading HAR UP dataset
             harDir = args.input_direct # This folder contains HAR-UP sub-dataset images
 
@@ -122,6 +125,8 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
             args.video = args.out_path + "test.mp4"
 
         else: 
+            print("Capture video")
+
             cam, tagged_df = get_source(args)
             ret_val, img = cam.read()
             funcVar = loadFrame    
@@ -208,7 +213,7 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
 
     queue.put(None)
     print("\nTOTAL {} FRAMES".format(index))
-    print("\nEXIT F3 - LINE 135")
+    print("\nEXIT Function 3 - LINE 135")
 
     return
 
@@ -217,15 +222,18 @@ def extract_keypoints_parallel(queue, args, self_counter, other_counter, consecu
 
 
 def show_tracked_img(img_dict, ip_set, num_matched, output_video, args):
-    # print("\n\nF4 - LINE 141")
+    print("\n\nFunction 4 - show_tracked_img() - LINE 225")
 
     img = img_dict["img"]
     tagged_df = img_dict["tagged_df"]
     keypoints_frame = [person[-1] for person in ip_set]
+
+    print("F4 - visualise_tracking()")
     img = visualise_tracking(img=img, keypoint_sets=keypoints_frame, width=img_dict["width"], height=img_dict["height"],
                              num_matched=num_matched, vis_keypoints=img_dict["vis_keypoints"], vis_skeleton=img_dict["vis_skeleton"],
                              CocoPointsOn=False)
 
+    print("F4 - write_on_image()")
     img = write_on_image(img=img, text=tagged_df["text"],
                          color=tagged_df["color"])
 
@@ -263,7 +271,7 @@ def show_tracked_img(img_dict, ip_set, num_matched, output_video, args):
 
 
 def remove_wrongly_matched(matched_1, matched_2):
-    print("\n\nF5 LINE 169")
+    print("\n\nFunction 5 - remove_wrongly_matched() - LINE 273")
 
     unmatched_idxs = []
     i = 0
@@ -280,7 +288,8 @@ def remove_wrongly_matched(matched_1, matched_2):
 
 
 def match_unmatched(unmatched_1, unmatched_2, lstm_set1, lstm_set2, num_matched):
-    print("\n\nF6 - LINE 185")
+    print("\n\nFunction 6 - match_unmatched() - LINE 291")
+
 
     new_matched_1 = []
     new_matched_2 = []
@@ -344,17 +353,17 @@ def match_unmatched(unmatched_1, unmatched_2, lstm_set1, lstm_set2, num_matched)
 
 
 def alg2_sequential(queues, argss, consecutive_frames, event):
-    print("\n\nF7 - LINE 248")
+    print("\n\nFuntion 7 - alg2_sequential() - LINE 356")
 
-    print("\ninit LSTM object - LINE 270")
+    print("\ninit LSTM object - LINE 358")
     model = LSTMModel(h_RNN=32, h_RNN_layers=2, drop_p=0.2, num_classes=7)
 
-    print("\nload LSTM2.sav - LINE 273")
+    print("\nload LSTM2.sav - LINE 361")
     model.load_state_dict(torch.load('lstm2.sav',map_location=argss[0].device))
 
-    print("\nEvaluate - LINE 276")
+    print("\nEvaluate - LINE 364")
     model.eval()
-    print("\nFinish Evaluating - LINE 278")
+    print("\nFinish Evaluating - LINE 366")
 
     output_videos = [None for _ in range(argss[0].num_cams)]
     t0 = time.time()
